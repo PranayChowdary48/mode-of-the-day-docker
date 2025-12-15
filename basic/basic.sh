@@ -16,7 +16,6 @@ docker stop $(docker ps -q)
 docker rm $(docker ps -a -q -f status=exited)
 # remove images
 docker rmi $(docker images -q)
-
 # build docker image using Dockerfile
 docker build -t pranaychowdary4/mood-of-the-day .
 # push docker image into dockerhub
