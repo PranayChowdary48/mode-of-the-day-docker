@@ -21,4 +21,12 @@ docker build -t pranaychowdary4/mood-of-the-day .
 # push docker image into dockerhub
 docker push pranaychowdary4/mood-of-the-day
 # run container using the docker image 
-docker run -p 5000:5000 pranaychowdary4/mood-of-the-day
+docker run -di -p 5000:5000 pranaychowdary4/mood-of-the-day
+# Deploy app using docker compose
+docker compose up --build
+# list of networs
+docker network ls
+# inspect the network
+docker network inspect dasic_default  
+# stop the container and delete volume
+docker compose down -v
