@@ -20,13 +20,7 @@ It is designed as a **learning repository** for understanding Docker fundamental
 
 ## 🧱 Architecture Overview
 
-```
-Browser
-   ↓
-Flask App (Python)
-   ↓
-Redis (Cache)
-```
+![Architecture Flowchart](images/mood-of-the-day-architecture.png)
 
 * Flask generates a **Mood of the Day**
 * Redis caches the mood for the current day
@@ -54,12 +48,10 @@ Redis (Cache)
 
 ### Features
 
+![app](images/app.png)
 * Random mood generation
 * Same mood served all day (cached in Redis)
 * Automatically refreshes next day
-* Footer message:
-
-  > **ROCK your attitude any day of the week 🤘**
 
 ### Run using Docker Compose
 
@@ -201,9 +193,10 @@ docker compose down -v
 
 ## 🏁 Final Note
 
-This repository is intentionally **simple, clean, and educational**, making it ideal for:
+This repository intentionally starts **simple** and focuses on core Docker and Docker Compose concepts..
 
-* Docker beginners
-* Interview preparation
+While building this one, certain Docker-specific limitations (daemon behavior, storage drivers, networking constraints, and security considerations) became apparent and are addressed in more depth in a separate Docker-focused repository.
+
+👉 https://github.com/pranaychowdary4/docker
 
 Happy containerizing 🚀
