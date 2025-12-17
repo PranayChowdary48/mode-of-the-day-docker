@@ -195,8 +195,6 @@ docker compose down -v
 
 This repository intentionally starts **simple** and focuses on core Docker and Docker Compose concepts..
 
-While building this one, certain Docker-specific limitations (daemon behavior, storage drivers, networking constraints, and security considerations) became apparent and are addressed in more depth in a separate Docker-focused repository.
-
-👉 https://github.com/pranaychowdary4/docker
+While building this one, certain Docker-specific limitations (daemon behavior, storage drivers, networking constraints, and security considerations) became apparent and are addressed in more depth in a separate [Docker-focused repository](https://github.com/PranayChowdary48/Docker/).
 
 Happy containerizing 🚀
