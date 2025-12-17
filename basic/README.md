@@ -48,7 +48,8 @@ It is designed as a **learning repository** for understanding Docker fundamental
 
 ### Features
 
-![app](images/app.png)
+
+<img src="images/app.png" width="300">
 * Random mood generation
 * Same mood served all day (cached in Redis)
 * Automatically refreshes next day
