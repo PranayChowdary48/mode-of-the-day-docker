@@ -1,4 +1,4 @@
-# 🐳 Baisic Docker
+# 🐳 Basic Docker
 
 This repository demonstrates **basic Docker concepts**, **multi-container communication using Docker Compose**, and a **simple Flask + Redis application** that serves a **Mood of the Day** with a GIF.
 
