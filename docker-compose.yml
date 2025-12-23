@@ -1,73 +1,24 @@
-version: '3.8'
+version: '2'
 
 services:
-  api:
-    build: ./api
-    image: autoscaler_playground_api:latest
-    deploy: {}
-    networks:
-      - playground
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
-    environment:
-      - SERVICE_NAME=api
+  app:
+    build: ./app
+    depends_on:
+      - redis
+    restart: unless-stopped
 
-  proxy:
-    build: ./proxy
+  redis:
+    image: redis:7-alpine
+    container_name: mood-redis
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: mood-nginx
     ports:
       - "8080:80"
-    depends_on:
-      - api
-    networks:
-      - playground
-
-  load-generator:
-    build: ./load-generator
-    depends_on:
-      - proxy
-    networks:
-      - playground
-    environment:
-      - TARGET=http://proxy:80
-      - RPS=20
-
-  prometheus:
-    image: prom/prometheus:latest
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
-    networks:
-      - playground
-
-  grafana:
-    image: grafana/grafana:9.5.0
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    ports:
-      - "3000:3000"
-    networks:
-      - playground
-
-  autoscaler:
-    build: ./autoscaler
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - prometheus
-      - api
-    networks:
-      - playground
-    environment:
-      - PROMETHEUS_URL=http://prometheus:9090
-      - TARGET_SERVICE=autoscaler_playground_api
-
-networks:
-  playground:
-    driver: bridge
-
-volumes:
-  grafana-storage:
+      - app
+    restart: unless-stopped
