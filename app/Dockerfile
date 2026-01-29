@@ -5,4 +5,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY templates/ templates/
 EXPOSE 5000
+HEALTHCHECK --interval=10s --timeout=2s --retries=3 \
+  CMD wget -q -O - http://localhost:5000/health || exit 1
 CMD ["python", "app.py"]
