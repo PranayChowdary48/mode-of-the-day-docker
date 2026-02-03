@@ -276,4 +276,6 @@ docker compose up -d --scale app=3
 ---
 
 ## One-line takeaway
-This repo is the Docker chapter of a DevOps series: it intentionally keeps Docker-only limitations visible before the **Kubernetes** and **AWS** follow-ups (https://github.com/example/mood-of-the-day-k8s).
+This repo is the Docker chapter of a DevOps series: it intentionally keeps Docker-only limitations visible before the **Kubernetes** and **AWS** follow-ups
+- K8s: https://github.com/PranayChowdary48/mode-of-the-day-k8s
+- AWS: 
