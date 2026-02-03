@@ -1,113 +1,110 @@
-# 📉 Limitation: 
+# Mood of the Day — Docker Compose Stack
 
-## Sticky Sessions with Nginx in Docker Compose
-**Why cookie-based session affinity does not work when scaling**
+A compact, production‑style demo stack that serves a “Mood of the Day” with a GIF and exposes full observability. It exists to show how a small web service behaves under caching, reverse proxying, and metrics collection — and where Docker Compose scaling starts to show its limits.
 
-This project attempts to implement **cookie-based sticky sessions with TTL** using Nginx. However, when the application service is scaled using Docker Compose (--scale app=N), session affinity does not work reliably.
+## Project overview
+The Flask app generates a daily mood and GIF, caches it in Redis with a TTL, and serves it through Nginx. Prometheus scrapes metrics from the app and exporters, and Grafana visualizes them. The goal is to make the system’s behavior visible end‑to‑end while remaining simple enough to run locally.
 
-**Root cause**
+## Architecture overview
+Request flow:
+```
+Client → Nginx → App → Redis
+                ↘ /metrics → Prometheus → Grafana
+```
+- **Client** hits Nginx (reverse proxy).
+- **Nginx** load‑balances to the app service.
+- **App** uses Redis for daily mood caching.
+- **Prometheus** scrapes the app and exporters.
+- **Grafana** visualizes the Prometheus data.
 
-Docker Compose scales services using DNS round-robin. From Nginx’s perspective, the upstream definition:
-```bash
-upstream mood_app {
-    server app:5000;
-}
+## Tech stack (and why it’s here)
+- **Flask (Python)**: simple HTTP service with deterministic daily behavior and metrics.
+- **Redis**: fast, TTL‑based cache to avoid regenerating the daily mood.
+- **Nginx**: reverse proxy and load balancer; realistic front door.
+- **Prometheus**: pull‑based metrics collection.
+- **Grafana**: dashboards for app, Nginx, and Redis metrics.
+- **Docker Compose**: local orchestration and scaling.
+
+## Docker Compose topology
+The stack uses two networks:
+- **frontend**: public entry point (Nginx).
+- **backend**: internal service network (app, redis, exporters, prometheus, grafana).
+
+Services communicate over service DNS (e.g., `app`, `redis`, `prometheus`). The app does **not** expose a host port when scaled to avoid binding conflicts.
+
+## Caching behavior (Redis)
+- **Key strategy**: `mood:<YYYY-MM-DD>`
+- **TTL**: seconds until midnight (daily rollover).
+- **Read path**: GET returns cached mood if present; otherwise generates and caches.
+- **Refresh path**: POST `/refresh` invalidates the key and writes a new mood immediately.
+
+## Observability
+### Structured JSON logging
+- App logs are JSON to stdout (container logs), suitable for log shippers.
+- Includes request path, container hostname, and cache status.
+
+### Prometheus metrics
+- App exposes `/metrics` on port 5000.
+- Nginx and Redis metrics come from exporters.
+- Example metrics:
+  - `http_requests_total`
+  - `http_request_latency_seconds_bucket`
+  - `process_cpu_seconds_total`
+  - `process_resident_memory_bytes`
+  - `nginx_connections_active`
+  - `redis_connected_clients`
+
+### Grafana dashboards
+A ready‑to‑import dashboard is included at:
+```
+monitoring/grafana/mood-app-nginx-redis.json
+```
+It includes sections for **App**, **Nginx**, and **Redis** with request rate, latency p95, CPU/memory, connections, and Redis ops.
+
+## Healthchecks & self‑healing
+- **App readiness**: `/health` verifies Redis connectivity.
+- **App liveness**: process uptime and error rates via metrics.
+- **Redis restart behavior**: data is cached; a restart simply rebuilds the key on next request.
+- **Nginx traffic isolation**: only Nginx is exposed on the frontend network; app stays internal.
+
+## Scaling strategy
+- Horizontal scaling via Compose: `docker compose up --scale app=3`.
+- Nginx uses service DNS (`app`) for upstream resolution.
+- **No sticky sessions**: Docker DNS round‑robin makes cookie‑based affinity unreliable in Compose.
+
+## How to run
+### Build
+```
+docker compose build
 ```
 
-represents a **single backend endpoint**, even though multiple containers exist behind it. Docker’s internal DNS resolves app to different container IPs per request, which means:
-
-* Nginx cannot see individual application containers
-* Cookie-based hashing has no stable backend to bind to
-* Session affinity (including TTL-based persistence) becomes ineffective
-
-This is a known limitation of Nginx OSS combined with Docker Compose service scaling, not an application-level issue.
-
----
-
-**Why defining multiple upstream servers works (but doesn’t scale)**
-Session affinity does work when containers are defined explicitly:
-```bash
-upstream mood_app {
-    hash $cookie_session_id consistent;
-    server app1:5000;
-    server app2:5000;
-    server app3:5000;
-}
+### Start
+```
+docker compose up -d
 ```
 
-In this setup:
-* Nginx can see each backend individually
-* Cookie hashing works correctly
-* Sticky sessions behave as expected
+### Scale the app
+```
+docker compose up -d --scale app=3
+```
 
-However, this approach introduces a major limitation:
-* Backend containers are statically defined
-* Scaling requires manual changes to:
-    * docker-compose.yml
-    * Nginx configuration
-* Dynamic scaling (auto-scaling or --scale) is not possible
-This defeats the purpose of container-based elasticity.
+## How to access
+- **Application (via Nginx)**: `http://localhost:8080`
+- **Prometheus UI**: `http://localhost:9090`
+- **Grafana UI**: `http://localhost:3000` (default `admin/admin`)
 
----
+## Limitations & trade‑offs
+- **Docker Compose only**: no service discovery beyond DNS round‑robin.
+- **No sticky sessions**: Nginx OSS cannot pin to replicas behind Compose DNS.
+- **No centralized log aggregation**: logs are stdout only.
+- **No Kubernetes**: intentionally kept local and simple.
 
-Can this be solved using only Nginx?
+## Possible enhancements
+- **Rate limiting** at Nginx (burst control).
+- **Alerting** via Prometheus + Grafana alert rules.
+- **Chaos testing** (fault injection on Redis/app).
+- **CI/CD** pipeline with linting, unit tests, and container scans.
+- **Kubernetes migration** with ingress and service discovery.
 
-With Nginx OSS, the options are limited:
-
-Option	Result
-Docker Compose scaling	❌ Sticky sessions break
-Static upstream servers	✅ Works, but not scalable
-Dynamic backend discovery	❌ Not supported
-Cookie TTL stickiness	❌ Unreliable with DNS
-
-Nginx OSS does not support dynamic service discovery or Docker API integration.
-
-Practical conclusion
-
-This repository intentionally demonstrates:
-
-Where Nginx works well
-
-Where Docker Compose introduces limitations
-
-Why session affinity requires Docker-aware proxies or orchestration
-
-In real-world setups, this problem is solved by:
-
-Docker-aware reverse proxies (e.g., Traefik)
-
-Kubernetes Ingress controllers
-
-Service meshes
-
-These approaches allow:
-
-Dynamic backend discovery
-
-Reliable sticky sessions
-
-TTL-based connection persistence
-
-True horizontal scaling
-
-Why this limitation is documented (and not worked around)
-
-Rather than forcing a static or brittle configuration, this project documents the limitation clearly to reflect real engineering constraints encountered while scaling containerized applications.
-
-Addressing these limitations properly requires changes at the orchestration or proxy layer, which is explored further in follow-up work.
-
-💬 One-line takeaway (interview-ready)
-
-“Sticky sessions with Nginx break in Docker Compose scaling because Nginx cannot see individual replicas behind DNS round-robin, making cookie-based routing unreliable.”
-
-If you want next, I can:
-
-Write a Traefik comparison section
-
-Add a Kubernetes Ingress equivalent
-
-Create a diagram showing why Nginx fails here
-
-Tighten this section further for interview clarity
-
-You’re thinking at system-design level now 🚀
+## Notes
+This repo focuses on operational clarity: it’s small enough to run locally, yet structured like a real service stack with observability and scaling constraints made explicit.

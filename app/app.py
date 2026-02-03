@@ -1,8 +1,9 @@
 import random
 import datetime
 import redis
-from flask import Flask, render_template, jsonify, Response, request
+from flask import Flask, render_template, jsonify, Response, request, g
 import socket
+import time
 from pythonjsonlogger import jsonlogger
 import logging
 from prometheus_client import Counter, Histogram, generate_latest
@@ -33,11 +34,17 @@ REQUEST_LATENCY = Histogram(
     "Request latency"
 )
 
+@app.before_request
+def start_timer():
+    g.start_time = time.perf_counter()
+
 @app.after_request
 def record_metrics(response):
     REQUEST_COUNT.labels(
         request.method, request.path, response.status_code
     ).inc()
+    if hasattr(g, "start_time"):
+        REQUEST_LATENCY.observe(time.perf_counter() - g.start_time)
     return response
 
 @app.route("/metrics")
