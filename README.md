@@ -1,4 +1,4 @@
-# Mood of the Day -- Docker Compose Stack
+# Mood of the Day - Docker
 
 A compact, production-style demo stack that serves a "Mood of the Day" with a GIF and exposes full observability. It exists to show how a small web service behaves under caching, reverse proxying, and metrics collection -- and where Docker Compose scaling starts to show its limits.
 
